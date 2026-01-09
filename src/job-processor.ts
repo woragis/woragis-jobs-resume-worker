@@ -167,7 +167,8 @@ export class ResumeJobProcessor {
       endTimer()
       metricsService.activeJobs.dec()
       metricsService.jobsFailedTotal.inc({
-        error_type: err instanceof Error ? err.constructor.name : 'UnknownError',
+        error_type:
+          err instanceof Error ? err.constructor.name : 'UnknownError',
       })
 
       logger.error(

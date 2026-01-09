@@ -49,7 +49,10 @@ export async function withRetry<T>(
             error.message.includes('403') ||
             error.message.includes('Invalid')
           ) {
-            logger.error({ error: error.message, operation }, 'Non-retryable error, bailing')
+            logger.error(
+              { error: error.message, operation },
+              'Non-retryable error, bailing'
+            )
             bail(error)
             return undefined as any // TypeScript hack, bail throws
           }

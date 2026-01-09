@@ -107,6 +107,7 @@ curl http://localhost:9090/metrics
 ```
 
 **Available metrics:**
+
 - `resume_jobs_processed_total`: Total jobs processed (by status)
 - `resume_jobs_failed_total`: Total failed jobs (by error type)
 - `resume_job_processing_duration_seconds`: Job processing time histogram
@@ -122,8 +123,7 @@ curl http://localhost:9090/health
 
 ### Logging
 
-Structured JSON logs with levels: `debug`, `info`, `warn`, `error`.
-Set `LOG_LEVEL` environment variable to control verbosity.
+Structured JSON logs with levels: `debug`, `info`, `warn`, `error`. Set `LOG_LEVEL` environment variable to control verbosity.
 
 ## Architecture
 
@@ -164,6 +164,7 @@ Set `LOG_LEVEL` environment variable to control verbosity.
 ### Retries
 
 Exponential backoff retry on:
+
 - Database queries (3 attempts by default)
 - External service calls (configurable via `RETRY_MAX_ATTEMPTS`)
 
@@ -217,25 +218,25 @@ Access management UI at `http://localhost:15682` (credentials: `woragis/woragis`
 ## Troubleshooting
 
 **Worker fails to start:**
+
 - Check all 3 `DATABASE_URL_*` variables are set
 - Verify databases are accessible
 - Check RabbitMQ connection
 
 **Jobs timing out:**
+
 - Increase `RESUME_SERVICE_TIMEOUT`
 - Check resume-service and AI-service are running
 - Review logs for specific errors
 
 **High memory usage:**
+
 - Reduce `DATABASE_POOL_SIZE` and `*_POOL_SIZE` values
 - Lower `WORKER_CONCURRENCY`
 
 ## License
 
-MIT
-5. Stores generated resume and metadata in database
-6. Updates job status in database
-7. Acknowledges message to RabbitMQ
+MIT 5. Stores generated resume and metadata in database 6. Updates job status in database 7. Acknowledges message to RabbitMQ
 
 ## License
 
