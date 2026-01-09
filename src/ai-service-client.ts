@@ -23,8 +23,11 @@ export class AIServiceClient {
 
   constructor() {
     this.client = axios.create({
-      baseURL: config.services.aiService,
-      timeout: 120000, // AI service might take longer
+      baseURL: config.services.aiService.url,
+      timeout: config.services.aiService.timeout,
+      headers: config.services.aiService.apiKey
+        ? { 'X-API-Key': config.services.aiService.apiKey }
+        : {},
     })
   }
 

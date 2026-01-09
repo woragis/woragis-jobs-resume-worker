@@ -7,22 +7,25 @@ export class DatabaseClient {
 
   constructor() {
     this.pool = new Pool({
-      connectionString: config.database.url,
-      max: config.database.poolSize,
+      connectionString: config.database.jobs.url,
+      max: config.database.jobs.poolSize,
+      connectionTimeoutMillis: config.database.jobs.connectionTimeout,
+      ssl: config.database.jobs.ssl ? { rejectUnauthorized: false } : false,
     })
 
     this.pool.on('error', (err: Error) => {
-      logger.error({ err }, 'Unexpected error on idle client')
+      logger.error({ err, db: 'jobs' }, 'Unexpected error on idle client')
     })
   }
 
   async connect(): Promise<void> {
     try {
       const client = await this.pool.connect()
+      await client.query('SELECT 1')
       client.release()
-      logger.info('Database connection pool initialized')
+      logger.info('Jobs database connection pool initialized')
     } catch (err) {
-      logger.error({ err }, 'Failed to connect to database')
+      logger.error({ err, db: 'jobs' }, 'Failed to connect to jobs database')
       throw err
     }
   }

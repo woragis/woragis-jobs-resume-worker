@@ -1,28 +1,55 @@
 import logger from './logger'
-import { config } from './config'
+import { config, validateConfig } from './config'
 import DatabaseClient from './database'
+import PostsDatabaseClient from './database-posts'
+import ManagementDatabaseClient from './database-management'
 import RabbitMQConsumer from './rabbitmq'
 import ResumeServiceClient from './resume-service-client'
 import AIServiceClient from './ai-service-client'
 import ResumeJobProcessor from './job-processor'
+import { metricsService } from './metrics'
 
-let db: DatabaseClient
+let dbJobs: DatabaseClient
+let dbPosts: PostsDatabaseClient
+let dbManagement: ManagementDatabaseClient
 let consumer: RabbitMQConsumer
 let processor: ResumeJobProcessor
 
 async function initialize(): Promise<void> {
   logger.info({ config }, 'Initializing Resume Worker')
 
-  // Initialize database
-  db = new DatabaseClient()
-  await db.connect()
+  // Validate configuration first (fail-fast)
+  validateConfig()
+
+  // Start metrics server
+  await metricsService.startServer()
+
+  // Initialize databases
+  logger.info('Connecting to databases...')
+
+  dbJobs = new DatabaseClient()
+  await dbJobs.connect()
+
+  dbPosts = new PostsDatabaseClient()
+  await dbPosts.connect()
+
+  dbManagement = new ManagementDatabaseClient()
+  await dbManagement.connect()
+
+  logger.info('All database connections established')
 
   // Initialize clients
   const resumeService = new ResumeServiceClient()
   const aiService = new AIServiceClient()
 
-  // Initialize processor
-  processor = new ResumeJobProcessor(db, resumeService, aiService)
+  // Initialize processor with all database clients
+  processor = new ResumeJobProcessor(
+    dbJobs,
+    dbPosts,
+    dbManagement,
+    resumeService,
+    aiService
+  )
 
   // Initialize RabbitMQ consumer
   consumer = new RabbitMQConsumer()
@@ -47,9 +74,19 @@ async function shutdown(): Promise<void> {
     await consumer.stop()
   }
 
-  if (db) {
-    await db.close()
+  if (dbJobs) {
+    await dbJobs.close()
   }
+
+  if (dbPosts) {
+    await dbPosts.close()
+  }
+
+  if (dbManagement) {
+    await dbManagement.close()
+  }
+
+  await metricsService.stopServer()
 
   logger.info('Resume Worker shut down gracefully')
   process.exit(0)
@@ -63,10 +100,13 @@ async function healthCheck(): Promise<boolean> {
       return false
     }
 
-    // Check database by running a simple query
-    const result = await db.query('SELECT 1')
-    if (result.rowCount === 0) {
-      logger.warn('Database health check failed')
+    // Check all database connections by running simple queries
+    try {
+      await dbJobs.query('SELECT 1')
+      await dbPosts.query('SELECT 1')
+      await dbManagement.query('SELECT 1')
+    } catch (dbErr) {
+      logger.error({ err: dbErr }, 'Database health check failed')
       return false
     }
 

@@ -27,8 +27,11 @@ export class ResumeServiceClient {
 
   constructor() {
     this.client = axios.create({
-      baseURL: config.services.resumeService,
-      timeout: 60000,
+      baseURL: config.services.resumeService.url,
+      timeout: config.services.resumeService.timeout,
+      headers: config.services.resumeService.apiKey
+        ? { 'X-API-Key': config.services.resumeService.apiKey }
+        : {},
     })
   }
 
