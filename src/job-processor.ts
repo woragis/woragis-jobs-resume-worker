@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid'
-import { DatabaseClient, JobStatus } from './database'
+import { DatabaseClient } from './database'
 import PostsDatabaseClient from './database-posts'
 import ManagementDatabaseClient from './database-management'
 import ResumeServiceClient from './resume-service-client'

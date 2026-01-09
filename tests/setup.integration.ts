@@ -29,8 +29,10 @@ export async function setupIntegrationTestEnv() {
   // Test connection
   try {
     await testPool.query('SELECT 1')
+    // eslint-disable-next-line no-console
     console.log('✓ Database connected for integration tests')
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.warn('⚠ Database not available for integration tests:', error)
   }
 }
@@ -53,6 +55,7 @@ export async function resetTestDatabase() {
       await testPool.query(`TRUNCATE TABLE ${table} CASCADE`)
     }
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.warn('Could not reset database:', error)
   }
 }

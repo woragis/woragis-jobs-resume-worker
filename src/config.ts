@@ -160,5 +160,6 @@ export function validateConfig(): void {
     }
   }
 
+  // eslint-disable-next-line no-console
   console.log('✓ Configuration validated successfully')
 }

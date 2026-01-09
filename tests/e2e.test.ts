@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from 'uuid'
 
 // Mock RabbitMQ channel for testing
 class MockRabbitMQChannel {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private messages: any[] = []
 
   async assertQueue(queue: string) {
@@ -21,7 +22,7 @@ class MockRabbitMQChannel {
     return true
   }
 
-  async consume(queue: string, _callback: unknown) {
+  async consume(_queue: string, _callback: unknown) {
     // Simulate message processing
     return { consumerTag: 'test-consumer' }
   }
