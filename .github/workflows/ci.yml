@@ -2,15 +2,15 @@ name: CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
 
 jobs:
   unit-tests:
     name: Unit Tests
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -104,20 +104,16 @@ jobs:
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: resume_worker_test
         options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+          --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+
         ports:
           - 5432:5432
 
       rabbitmq:
         image: rabbitmq:3-management
         options: >-
-          --health-cmd "rabbitmq-diagnostics ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+          --health-cmd "rabbitmq-diagnostics ping" --health-interval 10s --health-timeout 5s --health-retries 5
+
         ports:
           - 5672:5672
           - 15672:15672

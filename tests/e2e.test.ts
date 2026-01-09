@@ -191,7 +191,9 @@ describe('Resume Worker E2E Tests', () => {
 
       // Simulate retries
       while (retryCount < maxRetries) {
-        const messageBuffer = Buffer.from(JSON.stringify({ ...payload, retryCount }))
+        const messageBuffer = Buffer.from(
+          JSON.stringify({ ...payload, retryCount })
+        )
         await mockChannel.sendToQueue('resume-jobs', messageBuffer)
         retryCount++
       }
@@ -216,7 +218,10 @@ describe('Resume Worker E2E Tests', () => {
             company: 'Big Tech',
             duration: '2020-2024',
             description: 'Led team of 5 engineers',
-            achievements: ['Improved performance by 40%', 'Mentored 3 engineers'],
+            achievements: [
+              'Improved performance by 40%',
+              'Mentored 3 engineers',
+            ],
           },
           {
             title: 'Engineer',
@@ -338,7 +343,8 @@ describe('Resume Worker E2E Tests', () => {
       ]
 
       const failureRate =
-        (results.filter((r) => r.status === 'failed').length / results.length) * 100
+        (results.filter((r) => r.status === 'failed').length / results.length) *
+        100
 
       expect(failureRate).toBe(40)
     })

@@ -107,7 +107,13 @@ describe('Resume Worker Contracts', () => {
     })
 
     it('should validate status values', () => {
-      const validStatuses = ['pending', 'processing', 'completed', 'failed', 'expired']
+      const validStatuses = [
+        'pending',
+        'processing',
+        'completed',
+        'failed',
+        'expired',
+      ]
       const status = 'completed'
 
       expect(validStatuses).toContain(status)

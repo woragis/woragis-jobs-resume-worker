@@ -65,7 +65,9 @@ export async function resetTestDatabase() {
  */
 export function getTestPool(): Pool {
   if (!testPool) {
-    throw new Error('Test pool not initialized. Call setupIntegrationTestEnv first.')
+    throw new Error(
+      'Test pool not initialized. Call setupIntegrationTestEnv first.'
+    )
   }
   return testPool
 }
