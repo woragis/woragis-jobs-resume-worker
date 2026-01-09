@@ -236,8 +236,4 @@ Access management UI at `http://localhost:15682` (credentials: `woragis/woragis`
 
 ## License
 
-MIT 5. Stores generated resume and metadata in database 6. Updates job status in database 7. Acknowledges message to RabbitMQ
-
-## License
-
-MIT
+MIT - Licensed under the MIT License.
