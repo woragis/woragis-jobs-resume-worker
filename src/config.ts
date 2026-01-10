@@ -118,6 +118,8 @@ export function validateConfig(): void {
     { key: 'DATABASE_URL_POSTS', value: config.database.posts.url },
     { key: 'DATABASE_URL_MANAGEMENT', value: config.database.management.url },
     { key: 'RABBITMQ_HOST', value: config.rabbitmq.host },
+    { key: 'AI_SERVICE_URL', value: config.services.aiService.url },
+    { key: 'RESUME_SERVICE_URL', value: config.services.resumeService.url },
   ]
 
   const missing: string[] = []
