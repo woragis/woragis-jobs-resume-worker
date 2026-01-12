@@ -71,11 +71,16 @@ export class RabbitMQConsumer {
       // Declare exchange
       await this.channel.assertExchange(exchange, 'direct', { durable: true })
 
-      // Declare queue
+      // Declare dead-letter exchange
+      await this.channel.assertExchange('woragis.dlx', 'direct', { durable: true })
+
+      // Declare queue with DLX configuration
       await this.channel.assertQueue(queueName, {
         durable: true,
         arguments: {
           'x-max-priority': 10,
+          'x-dead-letter-exchange': 'woragis.dlx',
+          'x-dead-letter-routing-key': 'resumes.dead-letter',
         },
       })
 
