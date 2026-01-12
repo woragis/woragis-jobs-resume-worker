@@ -72,7 +72,9 @@ export class RabbitMQConsumer {
       await this.channel.assertExchange(exchange, 'direct', { durable: true })
 
       // Declare dead-letter exchange
-      await this.channel.assertExchange('woragis.dlx', 'direct', { durable: true })
+      await this.channel.assertExchange('woragis.dlx', 'direct', {
+        durable: true,
+      })
 
       // Declare queue with DLX configuration
       await this.channel.assertQueue(queueName, {
