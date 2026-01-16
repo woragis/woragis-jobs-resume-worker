@@ -6,6 +6,8 @@ export interface ResumeGenerationJob {
   jobId: string
   userId: string
   jobDescription: string
+  userEmail?: string
+  userName?: string
   metadata?: Record<string, any>
 }
 

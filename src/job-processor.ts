@@ -79,6 +79,8 @@ export class ResumeJobProcessor {
             projects: projects.length,
             experiences: experiences.length,
           },
+          userEmail: job.userEmail,
+          userName: job.userName,
         },
         'Data fetched from all databases'
       )
@@ -95,9 +97,23 @@ export class ResumeJobProcessor {
       }
 
       // Generate resume using resume-service
+      const userProfile = (job.userName || job.userEmail) ? {
+        name: job.userName || 'Your Name',
+        email: job.userEmail || 'user@example.com',
+      } : undefined
+
+      logger.info(
+        {
+          jobId: job.jobId,
+          userProfile,
+        },
+        'Calling resume service with userProfile'
+      )
+
       const resumeResponse = await this.resumeService.generateResume({
         userId: job.userId,
         jobDescription: job.jobDescription,
+        userProfile,
         metadata: {
           ...job.metadata,
           enrichedData,

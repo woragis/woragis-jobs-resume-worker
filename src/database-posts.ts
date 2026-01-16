@@ -111,7 +111,7 @@ export class PostsDatabaseClient {
   async getPosts(userId: string, limit: number = 50): Promise<Post[]> {
     try {
       const result = await this.pool.query<Post>(
-        `SELECT id, user_id, title, excerpt, content, url, tags, created_at
+        `SELECT id, user_id, title, excerpt, content, slug, created_at
          FROM posts
          WHERE user_id = $1
          ORDER BY created_at DESC
