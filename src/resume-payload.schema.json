@@ -1,0 +1,48 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["profile", "jobDescription"],
+  "properties": {
+    "profile": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "maxLength": 200 },
+        "email": { "type": "string", "format": "email", "maxLength": 200 },
+        "phone": { "type": "string", "maxLength": 50 },
+        "location": { "type": "string", "maxLength": 100 }
+      },
+      "additionalProperties": false
+    },
+    "jobDescription": { "type": "string", "maxLength": 2000 },
+    "experiences": {
+      "type": "array",
+      "maxItems": 40,
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+    "projects": {
+      "type": "array",
+      "maxItems": 40,
+      "items": { "type": "object", "additionalProperties": true }
+    },
+    "posts": {
+      "type": "array",
+      "maxItems": 40,
+      "items": { "type": "object", "additionalProperties": true }
+    },
+    "technicalWritings": {
+      "type": "array",
+      "maxItems": 40,
+      "items": { "type": "object", "additionalProperties": true }
+    },
+    "systemDesigns": {
+      "type": "array",
+      "maxItems": 40,
+      "items": { "type": "object", "additionalProperties": true }
+    },
+    "metadata": { "type": "object", "additionalProperties": true }
+  },
+  "additionalProperties": false
+}

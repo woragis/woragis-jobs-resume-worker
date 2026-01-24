@@ -26,7 +26,7 @@ export class RabbitMQConsumer {
       try {
         logger.info(
           { attempt: attempts + 1, maxRetries },
-          'Connecting to RabbitMQ'
+          'Connecting to RabbitMQ',
         )
 
         this.connection = await amqp.connect(getRabbitMQUrl())
@@ -48,12 +48,12 @@ export class RabbitMQConsumer {
         attempts++
         logger.warn(
           { err, attempt: attempts, maxRetries },
-          'RabbitMQ connection failed, retrying...'
+          'RabbitMQ connection failed, retrying...',
         )
 
         if (attempts < maxRetries) {
           await new Promise((resolve) =>
-            setTimeout(resolve, Math.pow(2, attempts) * 1000)
+            setTimeout(resolve, Math.pow(2, attempts) * 1000),
           )
         }
       }
@@ -96,7 +96,19 @@ export class RabbitMQConsumer {
 
       logger.info({ queueName, exchange, routingKey }, 'Queue setup completed')
     } catch (err) {
-      logger.error({ err }, 'Failed to setup queue')
+      // Provide a clearer error when exchange/queue already exist with different
+      // properties (PRECONDITION_FAILED). This commonly happens when the
+      // exchange type differs (topic vs direct) or arguments are inconsistent.
+      const errMsg = (err as any)?.message || ''
+      if (err && errMsg.includes('PRECONDITION_FAILED')) {
+        logger.error(
+          { err },
+          'Failed to setup queue: exchange/queue precondition failed. Check existing exchange type/args.',
+        )
+      } else {
+        logger.error({ err }, 'Failed to setup queue')
+      }
+
       throw err
     }
   }
@@ -133,7 +145,7 @@ export class RabbitMQConsumer {
 
             logger.info(
               { correlationId, jobId: job.jobId, userId: job.userId },
-              'Processing resume generation job'
+              'Processing resume generation job',
             )
 
             await this.jobHandler!(job)
@@ -141,7 +153,7 @@ export class RabbitMQConsumer {
             const duration = Date.now() - startTime
             logger.info(
               { correlationId, jobId: job.jobId, duration },
-              'Job completed successfully'
+              'Job completed successfully',
             )
 
             // Acknowledge the message
@@ -150,7 +162,7 @@ export class RabbitMQConsumer {
             const duration = Date.now() - startTime
             logger.error(
               { err, correlationId, duration },
-              'Job processing failed'
+              'Job processing failed',
             )
 
             // Nack and requeue (unless it's been requeued too many times)
@@ -162,13 +174,13 @@ export class RabbitMQConsumer {
             } else {
               logger.error(
                 { correlationId, retryCount },
-                'Job exceeded max retries, moving to dead letter queue'
+                'Job exceeded max retries, moving to dead letter queue',
               )
               this.channel!.nack(msg, false, false)
             }
           }
         },
-        { noAck: false }
+        { noAck: false },
       )
 
       logger.info({ queueName }, 'Started consuming from queue')

@@ -12,6 +12,8 @@ export interface ResumeGenerationRequest {
     location?: string
   }
   metadata?: Record<string, any>
+  // If the worker has already composed the full rendering payload, include here
+  payload?: any
 }
 
 export interface ResumeGenerationResponse {
@@ -19,6 +21,12 @@ export interface ResumeGenerationResponse {
   status: 'queued' | 'processing' | 'completed' | 'failed'
   pdfUrl?: string
   htmlUrl?: string
+  error?: string
+}
+
+export interface ResumeRenderResponse {
+  pdfUrl?: string
+  html?: string
   error?: string
 }
 
@@ -36,7 +44,7 @@ export class ResumeServiceClient {
   }
 
   async generateResume(
-    request: ResumeGenerationRequest
+    request: ResumeGenerationRequest,
   ): Promise<ResumeGenerationResponse> {
     try {
       logger.info(
@@ -44,19 +52,19 @@ export class ResumeServiceClient {
           userId: request.userId,
           jobDescription: request.jobDescription.substring(0, 100),
         },
-        'Requesting resume generation from resume-service'
+        'Requesting resume generation from resume-service',
       )
 
       const response = await this.client.post<ResumeGenerationResponse>(
         '/api/v1/resumes/generate',
-        request
+        request,
       )
 
       return response.data
     } catch (err) {
       logger.error(
         { err, userId: request.userId },
-        'Resume generation request failed'
+        'Resume generation request failed',
       )
       throw err
     }
@@ -65,7 +73,7 @@ export class ResumeServiceClient {
   async getResumeStatus(jobId: string): Promise<ResumeGenerationResponse> {
     try {
       const response = await this.client.get<ResumeGenerationResponse>(
-        `/api/v1/resumes/${jobId}/status`
+        `/api/v1/resumes/${jobId}/status`,
       )
 
       return response.data
@@ -77,19 +85,50 @@ export class ResumeServiceClient {
 
   async downloadResume(
     jobId: string,
-    format: 'pdf' | 'html' = 'pdf'
+    format: 'pdf' | 'html' = 'pdf',
   ): Promise<Buffer> {
     try {
       const response = await this.client.get(
         `/api/v1/resumes/${jobId}/${format}`,
         {
           responseType: 'arraybuffer',
-        }
+        },
       )
 
       return Buffer.from(response.data)
     } catch (err) {
       logger.error({ err, jobId, format }, 'Failed to download resume')
+      throw err
+    }
+  }
+
+  async downloadFromUrl(url: string): Promise<Buffer> {
+    try {
+      const response = await this.client.get(url, {
+        responseType: 'arraybuffer',
+      })
+      return Buffer.from(response.data)
+    } catch (err) {
+      logger.error({ err, url }, 'Failed to download resume from url')
+      throw err
+    }
+  }
+
+  async renderResume(
+    request: ResumeGenerationRequest,
+  ): Promise<ResumeRenderResponse> {
+    try {
+      logger.info(
+        { userId: request.userId },
+        'Requesting render from resume-service',
+      )
+      const response = await this.client.post<ResumeRenderResponse>(
+        '/api/v1/resumes/render',
+        request,
+      )
+      return response.data
+    } catch (err) {
+      logger.error({ err, userId: request.userId }, 'Render request failed')
       throw err
     }
   }

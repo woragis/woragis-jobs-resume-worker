@@ -3,17 +3,21 @@ import { config, validateConfig } from './config'
 import DatabaseClient from './database'
 import PostsDatabaseClient from './database-posts'
 import ManagementDatabaseClient from './database-management'
+import { AuthDatabaseClient } from './database-auth'
 import RabbitMQConsumer from './rabbitmq'
 import ResumeServiceClient from './resume-service-client'
 import AIServiceClient from './ai-service-client'
 import ResumeJobProcessor from './job-processor'
+import http from 'http'
 import { metricsService } from './metrics'
 
 let dbJobs: DatabaseClient
 let dbPosts: PostsDatabaseClient
 let dbManagement: ManagementDatabaseClient
+let dbAuth: AuthDatabaseClient
 let consumer: RabbitMQConsumer
 let processor: ResumeJobProcessor
+let fallbackServer: any | null = null
 
 async function initialize(): Promise<void> {
   logger.info({ config }, 'Initializing Resume Worker')
@@ -36,6 +40,9 @@ async function initialize(): Promise<void> {
   dbManagement = new ManagementDatabaseClient()
   await dbManagement.connect()
 
+  dbAuth = new AuthDatabaseClient()
+  await dbAuth.connect()
+
   logger.info('All database connections established')
 
   // Initialize clients
@@ -47,8 +54,9 @@ async function initialize(): Promise<void> {
     dbJobs,
     dbPosts,
     dbManagement,
+    dbAuth,
     resumeService,
-    aiService
+    aiService,
   )
 
   // Initialize RabbitMQ consumer
@@ -86,7 +94,21 @@ async function shutdown(): Promise<void> {
     await dbManagement.close()
   }
 
+  if (dbAuth) {
+    await dbAuth.close()
+  }
+
   await metricsService.stopServer()
+
+  if (fallbackServer) {
+    try {
+      await new Promise((resolve, reject) => {
+        fallbackServer.close((err: any) => (err ? reject(err) : resolve(null)))
+      })
+    } catch (err) {
+      logger.warn({ err }, 'Error closing fallback server')
+    }
+  }
 
   logger.info('Resume Worker shut down gracefully')
   process.exit(0)
@@ -143,6 +165,57 @@ async function main(): Promise<void> {
     })
 
     logger.info('Resume Worker is running. Press Ctrl+C to stop.')
+
+    // Optional HTTP fallback: accepts POSTs when AMQP publishing isn't available
+    if (process.env.ENABLE_HTTP_FALLBACK === 'true') {
+      const port = parseInt(process.env.FALLBACK_PORT || '3005')
+
+      fallbackServer = http.createServer((req, res) => {
+        if (req.method !== 'POST' || req.url !== '/fallback/resumes') {
+          res.writeHead(404, { 'Content-Type': 'application/json' })
+          res.end(JSON.stringify({ detail: 'Not found' }))
+          return
+        }
+
+        let body = ''
+        req.on('data', (chunk) => {
+          body += chunk
+          if (body.length > 1e6) {
+            // Too large
+            res.writeHead(413)
+            res.end()
+            req.socket.destroy()
+          }
+        })
+
+        req.on('end', async () => {
+          try {
+            const payload = JSON.parse(body || '{}')
+            if (!payload || !payload.jobId || !payload.userId) {
+              res.writeHead(400, { 'Content-Type': 'application/json' })
+              res.end(JSON.stringify({ detail: 'Missing jobId or userId' }))
+              return
+            }
+
+            await processor.processJob(payload)
+
+            res.writeHead(202, { 'Content-Type': 'application/json' })
+            res.end(JSON.stringify({ detail: 'Accepted' }))
+          } catch (err) {
+            logger.error({ err }, 'Fallback processing failed')
+            res.writeHead(500, { 'Content-Type': 'application/json' })
+            res.end(JSON.stringify({ detail: 'Internal error' }))
+          }
+        })
+      })
+
+      fallbackServer.listen(port, () => {
+        logger.info(
+          { port },
+          'HTTP fallback endpoint enabled at /fallback/resumes',
+        )
+      })
+    }
 
     // Periodic health check
     setInterval(async () => {

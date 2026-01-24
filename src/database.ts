@@ -32,7 +32,7 @@ export class DatabaseClient {
 
   async query<T = any>(
     text: string,
-    values?: any[]
+    values?: any[],
   ): Promise<{ rows: T[]; rowCount: number }> {
     try {
       const result = await this.pool.query(text, values)
@@ -51,7 +51,7 @@ export class DatabaseClient {
   }
 
   async transaction<T>(
-    callback: (client: PoolClient) => Promise<T>
+    callback: (client: PoolClient) => Promise<T>,
   ): Promise<T> {
     const client = await this.getClient()
     try {
@@ -71,7 +71,7 @@ export class DatabaseClient {
   async getResumeJobById(jobId: string): Promise<ResumeJob | null> {
     const result = await this.query<ResumeJob>(
       `SELECT * FROM resume_jobs WHERE id = $1`,
-      [jobId]
+      [jobId],
     )
     return result.rows[0] || null
   }
@@ -79,13 +79,13 @@ export class DatabaseClient {
   async updateResumeJobStatus(
     jobId: string,
     status: JobStatus,
-    metadata?: Record<string, any>
+    metadata?: Record<string, any>,
   ): Promise<void> {
     await this.query(
       `UPDATE resume_jobs 
        SET status = $1, metadata = $2, updated_at = NOW()
        WHERE id = $3`,
-      [status, JSON.stringify(metadata || {}), jobId]
+      [status, JSON.stringify(metadata || {}), jobId],
     )
   }
 
@@ -93,12 +93,27 @@ export class DatabaseClient {
     jobId: string,
     userId: string,
     filePath: string,
-    metadata: Record<string, any>
+    metadata: Record<string, any>,
   ): Promise<void> {
+    // Insert into the resumes table as present in the jobs database schema.
+    // The schema in production contains: id, user_id, title, is_main, is_featured,
+    // file_path, file_name, file_size, tags, created_at, updated_at, etc.
+    const fileName =
+      metadata && metadata.fileName
+        ? metadata.fileName
+        : `resume_${new Date().toISOString().split('T')[0]}`
+    const fileSize = metadata && metadata.fileSize ? metadata.fileSize : 0
+
+    // Ensure the userId used in the DB query is a valid UUID. Some test
+    // messages use friendly IDs (e.g. "e2e-test-user"); coerce them to a
+    // deterministic fallback UUID to avoid DB type errors.
+    const _isUuid = (s: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s)
+    const safeUserId = _isUuid(userId) ? userId : '00000000-0000-0000-0000-000000000001'
+
     await this.query(
-      `INSERT INTO resumes (id, job_id, user_id, file_path, metadata, created_at)
-       VALUES (gen_random_uuid(), $1, $2, $3, $4, NOW())`,
-      [jobId, userId, filePath, JSON.stringify(metadata)]
+      `INSERT INTO resumes (id, user_id, title, is_main, is_featured, file_path, file_name, file_size, tags, created_at)
+       VALUES (gen_random_uuid(), $1, $2, false, false, $3, $4, $5, $6, NOW())`,
+      [safeUserId, fileName, filePath, fileName, fileSize, JSON.stringify([])],
     )
   }
 

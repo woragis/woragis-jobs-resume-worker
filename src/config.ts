@@ -42,6 +42,13 @@ export const config = {
       connectionTimeout: parseInt(process.env.DATABASE_TIMEOUT || '10000'),
       ssl: process.env.DATABASE_MANAGEMENT_SSL === 'true',
     },
+    // Auth database (for retrieving user identity: name, email)
+    auth: {
+      url: process.env.DATABASE_URL_AUTH,
+      poolSize: parseInt(process.env.DATABASE_AUTH_POOL_SIZE || '10'),
+      connectionTimeout: parseInt(process.env.DATABASE_TIMEOUT || '10000'),
+      ssl: process.env.DATABASE_AUTH_SSL === 'true',
+    },
   },
 
   // Services
@@ -79,10 +86,10 @@ export const config = {
   circuitBreaker: {
     enabled: process.env.CIRCUIT_BREAKER_ENABLED !== 'false',
     failureThreshold: parseInt(
-      process.env.CIRCUIT_BREAKER_FAILURE_THRESHOLD || '5'
+      process.env.CIRCUIT_BREAKER_FAILURE_THRESHOLD || '5',
     ),
     resetTimeout: parseInt(
-      process.env.CIRCUIT_BREAKER_RESET_TIMEOUT || '60000'
+      process.env.CIRCUIT_BREAKER_RESET_TIMEOUT || '60000',
     ), // 1 min
   },
 
@@ -103,9 +110,38 @@ export const config = {
 
 export const getRabbitMQUrl = (): string => {
   const { rabbitmq } = config
-  return `amqp://${encodeURIComponent(rabbitmq.user)}:${encodeURIComponent(
-    rabbitmq.password
-  )}@${rabbitmq.host}:${rabbitmq.port}/${encodeURIComponent(rabbitmq.vhost)}`
+  // If an explicit RABBITMQ_URL is provided prefer it (compose sometimes sets it)
+  if (process.env.RABBITMQ_URL && process.env.RABBITMQ_URL.length > 0) {
+    return process.env.RABBITMQ_URL
+  }
+
+  // Normalize vhost handling:
+  // - Root vhost may be provided as '/' or '%2F' in configs. We want the URL
+  //   to include the encoded vhost value (e.g. '/%2F' for root) but avoid
+  //   double-slashes when callers set RABBITMQ_VHOST with a leading '/'.
+  let rawVhost = rabbitmq.vhost || '/'
+
+  // If the env provided an already-encoded vhost like '%2F' or '%2f', treat
+  // it as raw and keep it (we won't double-encode).
+  const looksEncoded = /^%[0-9A-Fa-f]{2}/.test(rawVhost)
+
+  // Normalize leading slashes: convert '/resume' -> 'resume', but keep '/' as
+  // the root vhost sentinel which should be encoded as '%2F'.
+  let toEncode: string
+  if (rawVhost === '/' || rawVhost === '') {
+    toEncode = '/'
+  } else if (looksEncoded) {
+    // If present as an encoded value, decode for normalization then re-encode
+    try {
+      toEncode = decodeURIComponent(rawVhost)
+    } catch (_) {
+      toEncode = rawVhost
+    }
+  } else {
+    toEncode = rawVhost.replace(/^\/+/, '')
+  }
+
+  return `amqp://${encodeURIComponent(rabbitmq.user)}:${encodeURIComponent(rabbitmq.password)}@${rabbitmq.host}:${rabbitmq.port}/${encodeURIComponent(toEncode)}`
 }
 
 /**
@@ -133,11 +169,11 @@ export function validateConfig(): void {
   if (missing.length > 0) {
     console.error(
       `❌ FATAL: Missing required environment variables:\n  ${missing.join(
-        '\n  '
-      )}`
+        '\n  ',
+      )}`,
     )
     console.error(
-      '\nPlease set these variables in your .env file or environment.'
+      '\nPlease set these variables in your .env file or environment.',
     )
     process.exit(1)
   }
@@ -156,7 +192,7 @@ export function validateConfig(): void {
       !url.startsWith('postgresql://')
     ) {
       console.error(
-        `❌ FATAL: ${name} must be a valid PostgreSQL connection string`
+        `❌ FATAL: ${name} must be a valid PostgreSQL connection string`,
       )
       process.exit(1)
     }
